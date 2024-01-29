@@ -18,14 +18,14 @@ def exec_func_mat(mat,command):
     exec(command, globals())
 
 class Data_Tree_BinaryDepvar:
-    def __init__(self,data,depvar,usable_vars, min_size_to_split,metric_string):
+    def __init__(self,data,depvar,usable_vars, min_size_to_split,metric_string,method = 'exclusion'):
         self.data = data
         self.depvar = depvar
         self.tracker = [""]*len(data[depvar])
-        # self.orig_rows = orig_rows
         self.usable_vars = usable_vars
         self.min_size_to_split = min_size_to_split
         self.metric_string = metric_string
+        self.method = method
 
     def Best_Split(self):
         diff = 0
@@ -35,8 +35,6 @@ class Data_Tree_BinaryDepvar:
 
         for var in self.usable_vars:
             length = len(self.data[var].unique())
-            # print(length)
-            # cat_array = self.matrix[var].unique()
             neg_split = np.array([])
             pos_split = np.array([])
             
@@ -48,16 +46,15 @@ class Data_Tree_BinaryDepvar:
 
             if (length >1 and var != self.depvar and var != "Claims"):
                 for cat in self.data[var].unique():
-                    mat = self.data[self.data[var]!=cat]
+                    if self.method == 'exclusion':
+                        mat = self.data[self.data[var]!=cat]
+                    elif self.method == 'inclusion':
+                        mat = self.data[self.data[var]==cat]
+
                     str_new = "mtr = "+self.metric_string
                     lcls=locals()                    
                     exec(str_new,globals(),lcls)
                     mtr = lcls["mtr"]
-
-                    # str_new = "threshold = "+self.metric_string
-                    # lcls=locals()                    
-                    # exec(str_new,globals(),lcls)
-                    # threshold = lcls["threshold"]
                     print(var,cat,mtr,threshold)
 
                     if mtr>=threshold:
@@ -88,10 +85,10 @@ class Data_Tree_BinaryDepvar:
         split_var, neg_split_var_cat, pos_split_var_cat = self.Best_Split()
 
         if split_var != '' and len(self.data)>self.min_size_to_split:
-            neg_data = Data_Tree_BinaryDepvar(self.data[self.data[split_var].isin(neg_split_var_cat)], self.depvar, self.usable_vars, self.min_size_to_split,self.metric_string)
+            neg_data = Data_Tree_BinaryDepvar(self.data[self.data[split_var].isin(neg_split_var_cat)], self.depvar, self.usable_vars, self.min_size_to_split,self.metric_string,self.method)
             neg_data.split_data1()
 
-            pos_data = Data_Tree_BinaryDepvar(self.data[self.data[split_var].isin(pos_split_var_cat)], self.depvar, self.usable_vars, self.min_size_to_split,self.metric_string)
+            pos_data = Data_Tree_BinaryDepvar(self.data[self.data[split_var].isin(pos_split_var_cat)], self.depvar, self.usable_vars, self.min_size_to_split,self.metric_string,self.method)
             pos_data.split_data1()
 
             str_neg=""
